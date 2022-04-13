@@ -1,0 +1,57 @@
+version: '3.1'
+services:
+  lib-php-fpm2:
+     build:
+          args:
+              user: www-data
+              uid: 1000
+          context: ./docker/php-8.0/
+     container_name: lib-php-fpm2
+     restart: unless-stopped
+     ports:
+        - 86:80
+
+     environment:
+          WWWUSER: '${WWWUSER}'
+     volumes:
+          - '.:/var/www/html'
+     networks:
+         - app
+     depends_on:
+         - lib-mysql2
+
+  lib-mysql2:
+        image: mysql
+        command: --default-authentication-plugin=mysql_native_password
+        container_name: lib-mysql2
+        restart: always
+        tty: true
+        ports:
+            - "3302:3306"
+        environment:
+            MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
+            MYSQL_DATABASE: '${DB_DATABASE}'
+
+        volumes:
+          - ./docker/mysql:/var/lib/mysql
+
+        networks:
+            - app
+        healthcheck:
+          test: ["CMD", "mysqladmin", "ping", "-p${DB_PASSWORD}"]
+          retries: 3
+          timeout: 5s
+
+  swagger:
+    image: swaggerapi/swagger-ui
+    ports:
+      - 8087:8080
+    environment:
+      API_URL: http://localhost:86/docs/json
+networks:
+    app:
+        driver: bridge
+volumes:
+    appmysql:
+        driver: local
+
